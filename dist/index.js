@@ -13653,18 +13653,19 @@ function run() {
         detectedDirs.forEach((detectedDir) => __awaiter(this, void 0, void 0, function* () {
             yield fsExtra.emptyDir("/tmp/argocd-kustomize-validation");
             const targetPaths = yield fs_1.promises.readdir(detectedDir);
-            targetPaths.forEach((targetPath) => __awaiter(this, void 0, void 0, function* () {
+            yield Promise.all(targetPaths.map((targetPath) => __awaiter(this, void 0, void 0, function* () {
                 const content = (yield octokit.rest.repos.getContent(Object.assign(Object.assign({}, actions.repo), { path: path_1.default.join(detectedDir, targetPath), ref: baseRef }))).data;
-                core.info(content.content || '');
+                const decoded = Buffer.from(content.content || '', "base64").toString("utf8");
+                core.info(decoded);
                 const filename = content.name;
-                yield fs_1.promises.writeFile(`/tmp/argocd-kustomize-validation/${path_1.default.basename(filename)}`, content.content || '');
-            }));
+                yield fs_1.promises.writeFile(`/tmp/argocd-kustomize-validation/${path_1.default.basename(filename)}`, decoded);
+            })));
             const debugFiles = yield fs_1.promises.readdir("/tmp/argocd-kustomize-validation");
             core.info(`Debug Files: ${debugFiles}`);
-            debugFiles.forEach((debugFile) => __awaiter(this, void 0, void 0, function* () {
+            yield Promise.all(debugFiles.map((debugFile) => __awaiter(this, void 0, void 0, function* () {
                 const content = yield fs_1.promises.readFile(path_1.default.join(`/tmp/argocd-kustomize-validation/${debugFile}`));
                 core.info(content.toString());
-            }));
+            })));
             // const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;
             // const currKustomizationOutput = (await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
             // console.log(baseKustomizationOutput);

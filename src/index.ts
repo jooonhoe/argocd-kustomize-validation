@@ -58,23 +58,24 @@ async function run() {
   detectedDirs.forEach(async detectedDir => {
     await fsExtra.emptyDir("/tmp/argocd-kustomize-validation");
     const targetPaths = await fs.readdir(detectedDir);
-    targetPaths.forEach(async (targetPath) => {
+    await Promise.all(targetPaths.map(async (targetPath) => {
 
       const content = (await octokit.rest.repos.getContent({
         ...actions.repo,
         path: path.join(detectedDir, targetPath),
         ref: baseRef
       })).data as Content;
-      core.info(content.content || '');
+      const decoded = Buffer.from(content.content || '', "base64").toString("utf8");
+      core.info(decoded);
       const filename = content.name;
-      await fs.writeFile(`/tmp/argocd-kustomize-validation/${path.basename(filename)}`, content.content || '');
-    });
+      await fs.writeFile(`/tmp/argocd-kustomize-validation/${path.basename(filename)}`, decoded);
+    }));
     const debugFiles = await fs.readdir("/tmp/argocd-kustomize-validation");
-    core.info(`Debug Files: ${debugFiles}`)
-    debugFiles.forEach(async debugFile => {
+    core.info(`Debug Files: ${debugFiles}`);
+    await Promise.all(debugFiles.map(async debugFile => {
       const content = await fs.readFile(path.join(`/tmp/argocd-kustomize-validation/${debugFile}`));
       core.info(content.toString());
-    });
+    }));
     // const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;
     // const currKustomizationOutput = (await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
     // console.log(baseKustomizationOutput);
