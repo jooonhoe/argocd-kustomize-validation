@@ -79,23 +79,41 @@ async function run() {
       const content = await fs.readFile(path.join(`/tmp/resources/${debugFile}`));
       core.info(content.toString());
     }));
-    const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/resources')).stdout;
-    await fs.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput);
-    const currKustomizationOutput = (await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
-    await fs.writeFile("/tmp/kustomization-results/2.yaml", currKustomizationOutput);
+    let errorCaptured = false;
+    const baseKustomizationOutput = await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/resources')
+    await fs.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput.stdout);
+    try {
+      const currKustomizationOutput = await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`);
+      await fs.writeFile("/tmp/kustomization-results/2.yaml", currKustomizationOutput.stdout);
+    } catch (error) {
+      errorCaptured = true;
+      await octokit.rest.issues.createComment({
+        issue_number: actions.issue.number,
+        ...actions.repo,
+        body: `
+        Kustomize build error in ${detectedDir}
+        ---
+        \`\`\`
+        ${(error as Error).message}
+        \`\`\`
+      `
+      });
+    }
 
-    const diffOutput = await exec.getExecOutput('diff -u /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml');
-    await octokit.rest.issues.createComment({
-      issue_number: actions.issue.number,
-      ...actions.repo,
-      body: `
+    if (!errorCaptured) {
+      const diffOutput = await exec.getExecOutput('diff -u /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml');
+      await octokit.rest.issues.createComment({
+        issue_number: actions.issue.number,
+        ...actions.repo,
+        body: `
         Differences of Kustomize built results in ${detectedDir}
         ---
         \`\`\`diff
         ${diffOutput.stdout}
         \`\`\`
       `
-    });
+      });
+    }
   }
 }
 
