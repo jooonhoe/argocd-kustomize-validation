@@ -3,3 +3,6 @@ description: "Validation Workflow before update a new version of ArgoCD app thro
 runs:
   using: "node16"
   main: "dist/index.js"
+input:
+  github-token:
+    required: true
