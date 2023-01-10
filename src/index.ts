@@ -39,6 +39,7 @@ async function buildEnv() {
   await exec.exec("chmod +x ./kubectl");
   await fs.mkdir("/tmp/resources", { recursive: true });
   await fs.mkdir("/tmp/kustomization-results", { recursive: true });
+  await exec.exec("./kubectl version");
 }
 
 async function run() {

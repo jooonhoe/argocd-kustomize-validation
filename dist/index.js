@@ -13637,6 +13637,7 @@ function buildEnv() {
         yield exec.exec("chmod +x ./kubectl");
         yield fs_1.promises.mkdir("/tmp/resources", { recursive: true });
         yield fs_1.promises.mkdir("/tmp/kustomization-results", { recursive: true });
+        yield exec.exec("./kubectl version");
     });
 }
 function run() {
