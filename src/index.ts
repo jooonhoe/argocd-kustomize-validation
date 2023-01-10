@@ -83,7 +83,14 @@ async function run() {
     const baseKustomizationOutput = await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/resources', undefined, { silent: true })
     await fs.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput.stdout);
     try {
-      const currKustomizationOutput = await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`, undefined, { silent: true });
+      let currKustomizationCmdOptions: exec.ExecOptions = { silent: true };
+      let currKustomizationStderr = '';
+      currKustomizationCmdOptions.listeners = {
+        stderr: (data: Buffer) => {
+          currKustomizationStderr += data.toString();
+        }
+      }
+      const currKustomizationOutput = await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`, undefined, currKustomizationCmdOptions);
       await fs.writeFile("/tmp/kustomization-results/2.yaml", currKustomizationOutput.stdout);
     } catch (error) {
       errorCaptured = true;
@@ -104,12 +111,12 @@ async function run() {
       let diffCmdOptions: exec.ExecOptions = {};
       let diffOutput = '';
       diffCmdOptions.listeners = {
-        stderr: (data: Buffer) => {
+        stdout: (data: Buffer) => {
           diffOutput += data.toString();
         }
       }
       try {
-        await exec.exec('diff -u /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml');
+        await exec.exec('diff -u /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml', undefined, diffCmdOptions);
       } catch (error) {
         await octokit.rest.issues.createComment({
           issue_number: actions.issue.number,
