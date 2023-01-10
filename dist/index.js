@@ -14937,8 +14937,13 @@ function prepareContext(ctx) {
 }
 function buildEnv() {
     return __awaiter(this, void 0, void 0, function* () {
-        yield exec.exec("curl -s \"https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh\" | bash");
-        console.log("Kustomize download is complete.");
+        const output = yield exec.getExecOutput("curl -s \"https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh\" | bash");
+        if (output.exitCode !== 0) {
+            core.setFailed(output.stderr);
+        }
+        else {
+            console.log("Kustomize download is complete.");
+        }
     });
 }
 function run() {

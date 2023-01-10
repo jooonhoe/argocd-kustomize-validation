@@ -27,8 +27,12 @@ function prepareContext(ctx: Context): CustomContext {
 }
 
 async function buildEnv() {
-  await exec.exec("curl -s \"https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh\" | bash");
-  console.log("Kustomize download is complete.");
+  const output = await exec.getExecOutput("curl -s \"https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh\" | bash");
+  if (output.exitCode !== 0) {
+    core.setFailed(output.stderr);
+  } else {
+    console.log("Kustomize download is complete.");
+  }
 }
 
 async function run() {
