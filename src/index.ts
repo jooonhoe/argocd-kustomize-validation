@@ -82,9 +82,9 @@ async function run() {
     let errorCaptured = false;
     const baseKustomizationOutput = await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/resources', undefined, { silent: true })
     await fs.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput.stdout);
+    let currKustomizationStderr = '';
     try {
       let currKustomizationCmdOptions: exec.ExecOptions = { silent: true };
-      let currKustomizationStderr = '';
       currKustomizationCmdOptions.listeners = {
         stderr: (data: Buffer) => {
           currKustomizationStderr += data.toString();
@@ -101,7 +101,7 @@ async function run() {
         Kustomize build error in ${detectedDir}
         ---
         \`\`\`
-        ${(error as Error)}
+        ${currKustomizationStderr}
         \`\`\`
       `
       });
@@ -122,12 +122,11 @@ async function run() {
           issue_number: actions.issue.number,
           ...actions.repo,
           body: `
-        Differences of Kustomize built results in ${detectedDir}
-        ---
-        \`\`\`diff
-        ${diffOutput}
-        \`\`\`
-        `});
+Differences of Kustomize built results in ${detectedDir}
+\`\`\`diff
+${diffOutput}
+\`\`\`
+`});
       }
     }
   }

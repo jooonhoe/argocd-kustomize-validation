@@ -13672,9 +13672,9 @@ function run() {
             let errorCaptured = false;
             const baseKustomizationOutput = yield exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/resources', undefined, { silent: true });
             yield fs_1.promises.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput.stdout);
+            let currKustomizationStderr = '';
             try {
                 let currKustomizationCmdOptions = { silent: true };
-                let currKustomizationStderr = '';
                 currKustomizationCmdOptions.listeners = {
                     stderr: (data) => {
                         currKustomizationStderr += data.toString();
@@ -13689,7 +13689,7 @@ function run() {
         Kustomize build error in ${detectedDir}
         ---
         \`\`\`
-        ${error}
+        ${currKustomizationStderr}
         \`\`\`
       ` }));
             }
@@ -13706,12 +13706,11 @@ function run() {
                 }
                 catch (error) {
                     yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: `
-        Differences of Kustomize built results in ${detectedDir}
-        ---
-        \`\`\`diff
-        ${diffOutput}
-        \`\`\`
-        ` }));
+Differences of Kustomize built results in ${detectedDir}
+\`\`\`diff
+${diffOutput}
+\`\`\`
+` }));
                 }
             }
         }
