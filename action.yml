@@ -1,12 +1,5 @@
 name: "ArgoCD Kustomize Validation"
 description: "Validation Workflow before update a new version of ArgoCD app through Kustomize"
-inputs:
-  chartmuseum-url:
-    required: true
-  chartmuseum-username:
-    required: true
-  chartmuseum-password:
-    required: true
 runs:
   using: "node16"
   main: "dist/index.js"

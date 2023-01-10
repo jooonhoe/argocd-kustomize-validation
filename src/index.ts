@@ -1,106 +1,76 @@
 import { promises as fs } from "fs";
+import * as fsExtra from "fs-extra";
 import * as core from "@actions/core";
 import * as exec from "@actions/exec";
 import { context, getOctokit } from "@actions/github";
-import * as yaml from "js-yaml";
+import { GitHub } from "@actions/github/lib/utils";
+import path from "path";
 
 type Context = typeof context;
 
 type CustomContext = {
   actions: Context,
-  chartmuseum: {
-    url: string,
-    username: string,
-    password: string,
-  },
+  octokit: InstanceType<typeof GitHub>
+};
+
+type Content = {
+  type: string;
+  size: number;
+  name: string;
+  path: string;
+  content?: string | undefined;
+  sha: string;
+  url: string;
+  git_url: string | null;
+  html_url: string | null;
+  download_url: string | null;
+  _links: object
 };
 
 function prepareContext(ctx: Context): CustomContext {
   return {
     actions: ctx,
-    chartmuseum: {
-      url: core.getInput("chartmuseum-url", { required: true }),
-      username: core.getInput("chartmuseum-username", { required: true }),
-      password: core.getInput("chartmuseum-password", { required: true }),
-    },
+    octokit: getOctokit(core.getInput("github-token", { required: true }))
   };
 }
 
 async function buildEnv() {
-  await exec.exec("curl -o install_kustomize.sh \"https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh\"");
-  await exec.exec("chmod 700 install_kustomize.sh");
-  await exec.exec("./install_kustomize.sh");
+  await exec.exec("curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.22.15/2022-10-31/bin/darwin/amd64/kubectl");
+  await exec.exec("chmod +x ./kubectl");
+  await fs.mkdir("/tmp");
 }
 
 async function run() {
-  const { actions, chartmuseum } = prepareContext(context);
+  const { actions, octokit } = prepareContext(context);
   await buildEnv();
-  const kustomization = {
-    helmCharts: [{
-      repo: "https://chartmuseum.util.riiid.cloud",
-      name: "toeic-speaking-api",
-      version: "0.3.1",
-      includeCRDs: true,
-      namespace: "toeic-speaking-api",
-      releaseName: "toeic-speaking-api",
-      valuesFile: "helm.toeic-speaking-api.yaml"
-    }]
-  }
+  const compareData = await octokit.rest.repos.compareCommits({
+    ...actions.repo,
+    base: actions.payload.pull_request!["base"]["sha"],
+    head: actions.sha
+  });
+  const baseRef = actions.payload.pull_request!["base"]["ref"];
+  const detectedDirs = Array.from(new Set((compareData.data.files || [])
+    .filter(file => file.status === 'modified' || file.status === 'changed')
+    .map(file => path.dirname(file.filename))));
+  detectedDirs.forEach(async (detectedDir) => {
+    await fsExtra.emptyDir("/tmp");
+    const targetPaths = await fs.readdir(detectedDir);
+    targetPaths.forEach(async (targetPath) => {
 
-  const values = {
-    env: "stg",
-    project: "toeic",
-    component: "speaking-api",
-    image: {
-      registry: "165167487431.dkr.ecr.ap-northeast-1.amazonaws.com",
-      repository: "toeic-speaking-api",
-      tag: "develop_2b53b1c_2022-12-27-09.14.56"
-    },
-    serviceAccount: {
-      iamRoleARN: "arn:aws:iam::888926908131:role/toeic-speaking-api-v2"
-    },
-    resources: {
-      requests: {
-        memory: "1Gi",
-        cpu: "100m",
-      },
-      limits: {
-        memory: "1Gi"
-      }
-    },
-    endpoints: {
-      public: [
-        {
-          host: "toeic-speaking-api.stg.riiid.cloud",
-          exposedPort: 443,
-          targetPort: 8080,
-          containerPort: 8080,
-          appProtocol: "http"
-        },
-      ],
-      internal: [
-        {
-          host: "toeic-speaking-api-internal.stg.riiid.cloud",
-          exposedPort: 443,
-          targetPort: 8080,
-          containerPort: 8080,
-          appProtocol: "http"
-        },
-      ]
-    }
-  }
+      const content = (await octokit.rest.repos.getContent({
+        ...actions.repo,
+        path: targetPath,
+        ref: baseRef
+      })).data as Content;
 
-  await fs.writeFile('kustomization.yaml', yaml.dump(kustomization));
-  await fs.writeFile('helm.toeic-speaking-api.yaml', yaml.dump(values));
-  core.debug('Writing mock files is complete');
-
-  const output = await exec.getExecOutput('kubectl kustomize . --enable-helm');
-  core.debug(output.stdout);
-
-  if (output.exitCode !== 0) {
-    core.debug(output.stderr);
-    core.setFailed(output.stderr);
-  }
+      const filename = content.name;
+      await fs.writeFile(`/tmp/${path.basename(filename)}`, content.content || '');
+    });
+    const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp')).stdout;
+    const currKustomizationOutput = (await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
+    console.log(baseKustomizationOutput);
+    console.log(currKustomizationOutput);
+  });
 }
 
 run();
