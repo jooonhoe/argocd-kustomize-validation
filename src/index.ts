@@ -37,7 +37,8 @@ function prepareContext(ctx: Context): CustomContext {
 async function buildEnv() {
   await exec.exec("curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.22.15/2022-10-31/bin/darwin/amd64/kubectl");
   await exec.exec("chmod +x ./kubectl");
-  await fs.mkdir("/tmp/argocd-kustomize-validation", { recursive: true });
+  await fs.mkdir("/tmp/resources", { recursive: true });
+  await fs.mkdir("/tmp/kustomization-results", { recursive: true });
 }
 
 async function run() {
@@ -55,8 +56,8 @@ async function run() {
     .filter(file => file.status === 'modified' || file.status === 'changed')
     .map(file => path.dirname(file.filename))));
   core.info(detectedDirs.toString());
-  detectedDirs.forEach(async detectedDir => {
-    await fsExtra.emptyDir("/tmp/argocd-kustomize-validation");
+  for (let detectedDir of detectedDirs) {
+    await fsExtra.emptyDir("/tmp/resources");
     const targetPaths = await fs.readdir(detectedDir);
     await Promise.all(targetPaths.map(async (targetPath) => {
 
@@ -66,21 +67,31 @@ async function run() {
         ref: baseRef
       })).data as Content;
       const decoded = Buffer.from(content.content || '', "base64").toString("utf8");
-      core.info(decoded);
       const filename = content.name;
-      await fs.writeFile(`/tmp/argocd-kustomize-validation/${path.basename(filename)}`, decoded);
+      await fs.writeFile(`/tmp/resources/${path.basename(filename)}`, decoded);
     }));
-    const debugFiles = await fs.readdir("/tmp/argocd-kustomize-validation");
-    core.info(`Debug Files: ${debugFiles}`);
+    const debugFiles = await fs.readdir("/tmp/resources");
+    core.info(`Debug Files(${detectedDir}): ${debugFiles}`);
     await Promise.all(debugFiles.map(async debugFile => {
-      const content = await fs.readFile(path.join(`/tmp/argocd-kustomize-validation/${debugFile}`));
+      const content = await fs.readFile(path.join(`/tmp/resources/${debugFile}`));
       core.info(content.toString());
     }));
-    // const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;
-    // const currKustomizationOutput = (await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
-    // console.log(baseKustomizationOutput);
-    // console.log(currKustomizationOutput);
-  });
+    await exec.exec('./kubectl kustomize --enable-helm /tmp/resources > /tmp/kustomization-results/1.yaml');
+    await exec.exec(`./kubectl kustomize --enable-helm ${detectedDir} > /tmp/kustomization-results/2.yaml`);
+
+    const diffOutput = await exec.getExecOutput('diff -u /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml');
+    await octokit.rest.issues.createComment({
+      issue_number: actions.issue.number,
+      ...actions.repo,
+      body: `
+        Differences of Kustomize built results in ${detectedDir}
+        ---
+        \`\`\`diff
+        ${diffOutput.stdout}
+        \`\`\`
+      `
+    });
+  }
 }
 
 run();

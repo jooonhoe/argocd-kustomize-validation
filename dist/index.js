@@ -13635,7 +13635,8 @@ function buildEnv() {
     return __awaiter(this, void 0, void 0, function* () {
         yield exec.exec("curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.22.15/2022-10-31/bin/darwin/amd64/kubectl");
         yield exec.exec("chmod +x ./kubectl");
-        yield fs_1.promises.mkdir("/tmp/argocd-kustomize-validation", { recursive: true });
+        yield fs_1.promises.mkdir("/tmp/resources", { recursive: true });
+        yield fs_1.promises.mkdir("/tmp/kustomization-results", { recursive: true });
     });
 }
 function run() {
@@ -13650,27 +13651,32 @@ function run() {
             .filter(file => file.status === 'modified' || file.status === 'changed')
             .map(file => path_1.default.dirname(file.filename))));
         core.info(detectedDirs.toString());
-        detectedDirs.forEach((detectedDir) => __awaiter(this, void 0, void 0, function* () {
-            yield fsExtra.emptyDir("/tmp/argocd-kustomize-validation");
+        for (let detectedDir of detectedDirs) {
+            yield fsExtra.emptyDir("/tmp/resources");
             const targetPaths = yield fs_1.promises.readdir(detectedDir);
             yield Promise.all(targetPaths.map((targetPath) => __awaiter(this, void 0, void 0, function* () {
                 const content = (yield octokit.rest.repos.getContent(Object.assign(Object.assign({}, actions.repo), { path: path_1.default.join(detectedDir, targetPath), ref: baseRef }))).data;
                 const decoded = Buffer.from(content.content || '', "base64").toString("utf8");
-                core.info(decoded);
                 const filename = content.name;
-                yield fs_1.promises.writeFile(`/tmp/argocd-kustomize-validation/${path_1.default.basename(filename)}`, decoded);
+                yield fs_1.promises.writeFile(`/tmp/resources/${path_1.default.basename(filename)}`, decoded);
             })));
-            const debugFiles = yield fs_1.promises.readdir("/tmp/argocd-kustomize-validation");
-            core.info(`Debug Files: ${debugFiles}`);
+            const debugFiles = yield fs_1.promises.readdir("/tmp/resources");
+            core.info(`Debug Files(${detectedDir}): ${debugFiles}`);
             yield Promise.all(debugFiles.map((debugFile) => __awaiter(this, void 0, void 0, function* () {
-                const content = yield fs_1.promises.readFile(path_1.default.join(`/tmp/argocd-kustomize-validation/${debugFile}`));
+                const content = yield fs_1.promises.readFile(path_1.default.join(`/tmp/resources/${debugFile}`));
                 core.info(content.toString());
             })));
-            // const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;
-            // const currKustomizationOutput = (await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
-            // console.log(baseKustomizationOutput);
-            // console.log(currKustomizationOutput);
-        }));
+            yield exec.exec('./kubectl kustomize --enable-helm /tmp/resources > /tmp/kustomization-results/1.yaml');
+            yield exec.exec(`./kubectl kustomize --enable-helm ${detectedDir} > /tmp/kustomization-results/2.yaml`);
+            const diffOutput = yield exec.getExecOutput('diff -u /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml');
+            yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: `
+        Differences of Kustomize built results in ${detectedDir}
+        ---
+        \`\`\`diff
+        ${diffOutput.stdout}
+        \`\`\`
+      ` }));
+        }
     });
 }
 run();
