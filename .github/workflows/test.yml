@@ -1,0 +1,25 @@
+name: ArgoCD Kustomize Validation
+on:
+  push:
+    branches:
+      - main
+jobs:
+  argocd-kustomize-validation:
+    name: "ArgoCD Kustomize Validation"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[SETUP] Checkout"
+        uses: actions/checkout@v2
+        with:
+          path: "argocd-kustomize-validation/."
+      - name: "[TEST] ls"
+        working-directory: ./argocd-kustomize-validation
+        run: |
+          ls -la dist/
+      - name: "[TEST] Run"
+        uses: ./
+        working-directory: ./argocd-kustomize-validation
+        with:
+          chartmuseum-url: https://chartmuseum.util.riiid.cloud
+          chartmuseum-username: riiid
+          chartmuseum-password: ${{ secrets.CHARTMUSUM_PASSWORD }}
