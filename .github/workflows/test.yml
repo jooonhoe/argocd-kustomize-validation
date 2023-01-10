@@ -9,13 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "[SETUP] Checkout"
-        uses: actions/checkout@v2
-        with:
-          path: "argocd-kustomize-validation/."
-      - name: "[TEST] ls"
-        working-directory: ./argocd-kustomize-validation
-        run: |
-          ls -la
+        uses: actions/checkout@v3
       - name: "[TEST] Run"
         uses: ./
         with:
