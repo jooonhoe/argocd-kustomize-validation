@@ -77,8 +77,10 @@ async function run() {
       const content = await fs.readFile(path.join(`/tmp/resources/${debugFile}`));
       core.info(content.toString());
     }));
-    await exec.exec('./kubectl kustomize --enable-helm /tmp/resources > /tmp/kustomization-results/1.yaml');
-    await exec.exec(`./kubectl kustomize --enable-helm ${detectedDir} > /tmp/kustomization-results/2.yaml`);
+    const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/resources')).stdout;
+    await fs.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput);
+    const currKustomizationOutput = (await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
+    await fs.writeFile("/tmp/kustomization-results/2.yaml", currKustomizationOutput);
 
     const diffOutput = await exec.getExecOutput('diff -u /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml');
     await octokit.rest.issues.createComment({

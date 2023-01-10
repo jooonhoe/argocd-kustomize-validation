@@ -13667,8 +13667,10 @@ function run() {
                 const content = yield fs_1.promises.readFile(path_1.default.join(`/tmp/resources/${debugFile}`));
                 core.info(content.toString());
             })));
-            yield exec.exec('./kubectl kustomize --enable-helm /tmp/resources > /tmp/kustomization-results/1.yaml');
-            yield exec.exec(`./kubectl kustomize --enable-helm ${detectedDir} > /tmp/kustomization-results/2.yaml`);
+            const baseKustomizationOutput = (yield exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/resources')).stdout;
+            yield fs_1.promises.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput);
+            const currKustomizationOutput = (yield exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
+            yield fs_1.promises.writeFile("/tmp/kustomization-results/2.yaml", currKustomizationOutput);
             const diffOutput = yield exec.getExecOutput('diff -u /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml');
             yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: `
         Differences of Kustomize built results in ${detectedDir}
