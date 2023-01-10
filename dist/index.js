@@ -13644,12 +13644,12 @@ function run() {
         yield buildEnv();
         const compareData = yield octokit.rest.repos.compareCommits(Object.assign(Object.assign({}, actions.repo), { base: actions.payload.pull_request["base"]["sha"], head: actions.sha }));
         const baseRef = actions.payload.pull_request["base"]["ref"];
-        core.debug(actions.payload.pull_request["base"].toString());
-        core.debug((compareData.data.files || []).toString());
+        core.info(actions.payload.pull_request["base"].toString());
+        core.info((compareData.data.files || []).toString());
         const detectedDirs = Array.from(new Set((compareData.data.files || [])
             .filter(file => file.status === 'modified' || file.status === 'changed')
             .map(file => path_1.default.dirname(file.filename))));
-        core.debug(detectedDirs.toString());
+        core.info(detectedDirs.toString());
         detectedDirs.forEach((detectedDir) => __awaiter(this, void 0, void 0, function* () {
             yield fsExtra.emptyDir("/tmp/argocd-kustomize-validation");
             const targetPaths = yield fs_1.promises.readdir(detectedDir);
@@ -13661,7 +13661,7 @@ function run() {
             const debugFiles = yield fs_1.promises.readdir("/tmp/argocd-kustomize-validation");
             debugFiles.forEach((debugFile) => __awaiter(this, void 0, void 0, function* () {
                 const content = yield fs_1.promises.readFile(debugFile);
-                core.debug(content.toString());
+                core.info(content.toString());
                 console.log(content.toString());
             }));
             // const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;

@@ -49,12 +49,12 @@ async function run() {
     head: actions.sha
   });
   const baseRef = actions.payload.pull_request!["base"]["ref"];
-  core.debug(actions.payload.pull_request!["base"].toString());
-  core.debug((compareData.data.files || []).toString());
+  core.info(actions.payload.pull_request!["base"].toString());
+  core.info((compareData.data.files || []).toString());
   const detectedDirs = Array.from(new Set((compareData.data.files || [])
     .filter(file => file.status === 'modified' || file.status === 'changed')
     .map(file => path.dirname(file.filename))));
-  core.debug(detectedDirs.toString());
+  core.info(detectedDirs.toString());
   detectedDirs.forEach(async detectedDir => {
     await fsExtra.emptyDir("/tmp/argocd-kustomize-validation");
     const targetPaths = await fs.readdir(detectedDir);
@@ -72,7 +72,7 @@ async function run() {
     const debugFiles = await fs.readdir("/tmp/argocd-kustomize-validation");
     debugFiles.forEach(async debugFile => {
       const content = await fs.readFile(debugFile);
-      core.debug(content.toString());
+      core.info(content.toString());
       console.log(content.toString());
     });
     // const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;
