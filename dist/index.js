@@ -13633,7 +13633,7 @@ function prepareContext(ctx) {
 }
 function buildEnv() {
     return __awaiter(this, void 0, void 0, function* () {
-        yield exec.exec("curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"");
+        yield exec.exec("curl -LO \"https://dl.k8s.io/release/v1.26.0/bin/linux/amd64/kubectl\"");
         yield exec.exec("chmod +x ./kubectl");
         yield fs_1.promises.mkdir("/tmp/resources", { recursive: true });
         yield fs_1.promises.mkdir("/tmp/kustomization-results", { recursive: true });

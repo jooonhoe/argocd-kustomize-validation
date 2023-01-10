@@ -35,7 +35,7 @@ function prepareContext(ctx: Context): CustomContext {
 }
 
 async function buildEnv() {
-  await exec.exec("curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"");
+  await exec.exec("curl -LO \"https://dl.k8s.io/release/v1.26.0/bin/linux/amd64/kubectl\"");
   await exec.exec("chmod +x ./kubectl");
   await fs.mkdir("/tmp/resources", { recursive: true });
   await fs.mkdir("/tmp/kustomization-results", { recursive: true });
