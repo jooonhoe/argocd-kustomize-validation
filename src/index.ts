@@ -37,9 +37,11 @@ function prepareContext(ctx: Context): CustomContext {
 async function buildEnv() {
   await exec.exec("curl -LO \"https://dl.k8s.io/release/v1.26.0/bin/linux/amd64/kubectl\"");
   await exec.exec("chmod +x ./kubectl");
+  await exec.exec("curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3");
+  await exec.exec("chmod 700 get_helm.sh");
+  await exec.exec("./get_helm.sh");
   await fs.mkdir("/tmp/resources", { recursive: true });
   await fs.mkdir("/tmp/kustomization-results", { recursive: true });
-  await exec.exec("./kubectl version");
 }
 
 async function run() {

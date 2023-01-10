@@ -13635,9 +13635,11 @@ function buildEnv() {
     return __awaiter(this, void 0, void 0, function* () {
         yield exec.exec("curl -LO \"https://dl.k8s.io/release/v1.26.0/bin/linux/amd64/kubectl\"");
         yield exec.exec("chmod +x ./kubectl");
+        yield exec.exec("curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3");
+        yield exec.exec("chmod 700 get_helm.sh");
+        yield exec.exec("./get_helm.sh");
         yield fs_1.promises.mkdir("/tmp/resources", { recursive: true });
         yield fs_1.promises.mkdir("/tmp/kustomization-results", { recursive: true });
-        yield exec.exec("./kubectl version");
     });
 }
 function run() {
