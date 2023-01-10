@@ -13644,8 +13644,8 @@ function run() {
         yield buildEnv();
         const compareData = yield octokit.rest.repos.compareCommits(Object.assign(Object.assign({}, actions.repo), { base: actions.payload.pull_request["base"]["sha"], head: actions.sha }));
         const baseRef = actions.payload.pull_request["base"]["ref"];
-        core.info(JSON.stringify(actions.payload.pull_request["base"]));
-        core.info((compareData.data.files || []).map(fileObj => JSON.stringify(fileObj)).toString());
+        // core.info(JSON.stringify(actions.payload.pull_request!["base"]));
+        // core.info((compareData.data.files || []).map(fileObj => JSON.stringify(fileObj)).toString());
         const detectedDirs = Array.from(new Set((compareData.data.files || [])
             .filter(file => file.status === 'modified' || file.status === 'changed')
             .map(file => path_1.default.dirname(file.filename))));
@@ -13655,14 +13655,15 @@ function run() {
             const targetPaths = yield fs_1.promises.readdir(detectedDir);
             targetPaths.forEach((targetPath) => __awaiter(this, void 0, void 0, function* () {
                 const content = (yield octokit.rest.repos.getContent(Object.assign(Object.assign({}, actions.repo), { path: path_1.default.join(detectedDir, targetPath), ref: baseRef }))).data;
+                core.info(content.content || '');
                 const filename = content.name;
                 yield fs_1.promises.writeFile(`/tmp/argocd-kustomize-validation/${path_1.default.basename(filename)}`, content.content || '');
             }));
             const debugFiles = yield fs_1.promises.readdir("/tmp/argocd-kustomize-validation");
+            core.info(`Debug Files: ${debugFiles}`);
             debugFiles.forEach((debugFile) => __awaiter(this, void 0, void 0, function* () {
-                const content = yield fs_1.promises.readFile(debugFile);
+                const content = yield fs_1.promises.readFile(path_1.default.join(`/tmp/argocd-kustomize-validation/${debugFile}`));
                 core.info(content.toString());
-                console.log(content.toString());
             }));
             // const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;
             // const currKustomizationOutput = (await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;

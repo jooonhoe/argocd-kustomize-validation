@@ -49,8 +49,8 @@ async function run() {
     head: actions.sha
   });
   const baseRef = actions.payload.pull_request!["base"]["ref"];
-  core.info(JSON.stringify(actions.payload.pull_request!["base"]));
-  core.info((compareData.data.files || []).map(fileObj => JSON.stringify(fileObj)).toString());
+  // core.info(JSON.stringify(actions.payload.pull_request!["base"]));
+  // core.info((compareData.data.files || []).map(fileObj => JSON.stringify(fileObj)).toString());
   const detectedDirs = Array.from(new Set((compareData.data.files || [])
     .filter(file => file.status === 'modified' || file.status === 'changed')
     .map(file => path.dirname(file.filename))));
@@ -65,15 +65,15 @@ async function run() {
         path: path.join(detectedDir, targetPath),
         ref: baseRef
       })).data as Content;
-
+      core.info(content.content || '');
       const filename = content.name;
       await fs.writeFile(`/tmp/argocd-kustomize-validation/${path.basename(filename)}`, content.content || '');
     });
     const debugFiles = await fs.readdir("/tmp/argocd-kustomize-validation");
+    core.info(`Debug Files: ${debugFiles}`)
     debugFiles.forEach(async debugFile => {
-      const content = await fs.readFile(debugFile);
+      const content = await fs.readFile(path.join(`/tmp/argocd-kustomize-validation/${debugFile}`));
       core.info(content.toString());
-      console.log(content.toString());
     });
     // const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;
     // const currKustomizationOutput = (await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
