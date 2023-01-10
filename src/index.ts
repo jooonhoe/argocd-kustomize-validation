@@ -29,9 +29,10 @@ function prepareContext(ctx: Context): CustomContext {
 async function buildEnv() {
   const output = await exec.getExecOutput("curl -s \"https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh\" | bash");
   if (output.exitCode !== 0) {
+    core.debug(output.stderr);
     core.setFailed(output.stderr);
   } else {
-    console.log("Kustomize download is complete.");
+    core.debug("Kustomize download is complete.");
   }
 }
 
@@ -95,12 +96,13 @@ async function run() {
 
   await fs.writeFile('kustomization.yaml', yaml.dump(kustomization));
   await fs.writeFile('helm.toeic-speaking-api.yaml', yaml.dump(values));
-  console.log('Writing mock files is complete');
+  core.debug('Writing mock files is complete');
 
   const output = await exec.getExecOutput('kubectl kustomize . --enable-helm');
-  console.log(output.stdout);
+  core.debug(output.stdout);
 
   if (output.exitCode !== 0) {
+    core.debug(output.stderr);
     core.setFailed(output.stderr);
   }
 }

@@ -14939,10 +14939,11 @@ function buildEnv() {
     return __awaiter(this, void 0, void 0, function* () {
         const output = yield exec.getExecOutput("curl -s \"https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh\" | bash");
         if (output.exitCode !== 0) {
+            core.debug(output.stderr);
             core.setFailed(output.stderr);
         }
         else {
-            console.log("Kustomize download is complete.");
+            core.debug("Kustomize download is complete.");
         }
     });
 }
@@ -15005,10 +15006,11 @@ function run() {
         };
         yield fs_1.promises.writeFile('kustomization.yaml', yaml.dump(kustomization));
         yield fs_1.promises.writeFile('helm.toeic-speaking-api.yaml', yaml.dump(values));
-        console.log('Writing mock files is complete');
+        core.debug('Writing mock files is complete');
         const output = yield exec.getExecOutput('kubectl kustomize . --enable-helm');
-        console.log(output.stdout);
+        core.debug(output.stdout);
         if (output.exitCode !== 0) {
+            core.debug(output.stderr);
             core.setFailed(output.stderr);
         }
     });
