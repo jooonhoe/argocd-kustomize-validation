@@ -13633,8 +13633,8 @@ function prepareContext(ctx) {
 }
 function buildEnv() {
     return __awaiter(this, void 0, void 0, function* () {
-        yield exec.exec("curl -O \"https://s3.us-west-2.amazonaws.com/amazon-eks/1.22.15/2022-10-31/bin/darwin/amd64/kubectl\"");
-        yield exec.exec("chmod 700 ./kubectl");
+        yield exec.exec("curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"");
+        yield exec.exec("chmod +x ./kubectl");
         yield fs_1.promises.mkdir("/tmp/resources", { recursive: true });
         yield fs_1.promises.mkdir("/tmp/kustomization-results", { recursive: true });
         yield exec.exec("./kubectl version");
