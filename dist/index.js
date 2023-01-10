@@ -13647,6 +13647,7 @@ function run() {
         const detectedDirs = Array.from(new Set((compareData.data.files || [])
             .filter(file => file.status === 'modified' || file.status === 'changed')
             .map(file => path_1.default.dirname(file.filename))));
+        core.debug(detectedDirs.toString());
         detectedDirs.forEach((detectedDir) => __awaiter(this, void 0, void 0, function* () {
             yield fsExtra.emptyDir("/tmp/argocd-kustomize-validation");
             const targetPaths = yield fs_1.promises.readdir(detectedDir);
@@ -13654,6 +13655,12 @@ function run() {
                 const content = (yield octokit.rest.repos.getContent(Object.assign(Object.assign({}, actions.repo), { path: targetPath, ref: baseRef }))).data;
                 const filename = content.name;
                 yield fs_1.promises.writeFile(`/tmp/argocd-kustomize-validation/${path_1.default.basename(filename)}`, content.content || '');
+            }));
+            const debugFiles = yield fs_1.promises.readdir("/tmp/argocd-kustomize-validation");
+            debugFiles.forEach((debugFile) => __awaiter(this, void 0, void 0, function* () {
+                const content = yield fs_1.promises.readFile(debugFile);
+                core.debug(content.toString());
+                console.log(content.toString());
             }));
             const baseKustomizationOutput = (yield exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;
             const currKustomizationOutput = (yield exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
