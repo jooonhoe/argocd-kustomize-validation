@@ -49,8 +49,8 @@ async function run() {
     head: actions.sha
   });
   const baseRef = actions.payload.pull_request!["base"]["ref"];
-  core.info(actions.payload.pull_request!["base"].toString());
-  core.info((compareData.data.files || []).toString());
+  core.info(JSON.stringify(actions.payload.pull_request!["base"]));
+  core.info((compareData.data.files || []).map(fileObj => JSON.stringify(fileObj)).toString());
   const detectedDirs = Array.from(new Set((compareData.data.files || [])
     .filter(file => file.status === 'modified' || file.status === 'changed')
     .map(file => path.dirname(file.filename))));
@@ -62,7 +62,7 @@ async function run() {
 
       const content = (await octokit.rest.repos.getContent({
         ...actions.repo,
-        path: targetPath,
+        path: path.join(detectedDir, targetPath),
         ref: baseRef
       })).data as Content;
 

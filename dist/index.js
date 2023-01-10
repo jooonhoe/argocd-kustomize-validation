@@ -13644,8 +13644,8 @@ function run() {
         yield buildEnv();
         const compareData = yield octokit.rest.repos.compareCommits(Object.assign(Object.assign({}, actions.repo), { base: actions.payload.pull_request["base"]["sha"], head: actions.sha }));
         const baseRef = actions.payload.pull_request["base"]["ref"];
-        core.info(actions.payload.pull_request["base"].toString());
-        core.info((compareData.data.files || []).toString());
+        core.info(JSON.stringify(actions.payload.pull_request["base"]));
+        core.info((compareData.data.files || []).map(fileObj => JSON.stringify(fileObj)).toString());
         const detectedDirs = Array.from(new Set((compareData.data.files || [])
             .filter(file => file.status === 'modified' || file.status === 'changed')
             .map(file => path_1.default.dirname(file.filename))));
@@ -13654,7 +13654,7 @@ function run() {
             yield fsExtra.emptyDir("/tmp/argocd-kustomize-validation");
             const targetPaths = yield fs_1.promises.readdir(detectedDir);
             targetPaths.forEach((targetPath) => __awaiter(this, void 0, void 0, function* () {
-                const content = (yield octokit.rest.repos.getContent(Object.assign(Object.assign({}, actions.repo), { path: targetPath, ref: baseRef }))).data;
+                const content = (yield octokit.rest.repos.getContent(Object.assign(Object.assign({}, actions.repo), { path: path_1.default.join(detectedDir, targetPath), ref: baseRef }))).data;
                 const filename = content.name;
                 yield fs_1.promises.writeFile(`/tmp/argocd-kustomize-validation/${path_1.default.basename(filename)}`, content.content || '');
             }));
