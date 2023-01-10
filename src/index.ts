@@ -2,6 +2,7 @@ import { promises as fs } from "fs";
 import * as fsExtra from "fs-extra";
 import * as core from "@actions/core";
 import * as exec from "@actions/exec";
+import dedent from "dedent";
 import { context, getOctokit } from "@actions/github";
 import { GitHub } from "@actions/github/lib/utils";
 import path from "path";
@@ -97,13 +98,12 @@ async function run() {
       await octokit.rest.issues.createComment({
         issue_number: actions.issue.number,
         ...actions.repo,
-        body: `
-        Kustomize build error in ${detectedDir}
-        ---
-        \`\`\`
-        ${currKustomizationStderr}
-        \`\`\`
-      `
+        body: dedent`
+          Kustomize build error in ${detectedDir}
+          ---
+          \`\`\`
+          ${currKustomizationStderr}
+          \`\`\``
       });
     }
 
@@ -116,17 +116,17 @@ async function run() {
         }
       }
       try {
-        await exec.exec('diff -u /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml', undefined, diffCmdOptions);
+        await exec.exec('diff -U -1 /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml', undefined, diffCmdOptions);
       } catch (error) {
         await octokit.rest.issues.createComment({
           issue_number: actions.issue.number,
           ...actions.repo,
-          body: `
-Differences of Kustomize built results in ${detectedDir}
-\`\`\`diff
-${diffOutput}
-\`\`\`
-`});
+          body: dedent`
+            Differences of Kustomize built results in ${detectedDir}
+            \`\`\`diff
+            ${diffOutput}
+            \`\`\``
+        });
       }
     }
   }
