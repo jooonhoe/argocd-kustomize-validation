@@ -37,7 +37,7 @@ function prepareContext(ctx: Context): CustomContext {
 async function buildEnv() {
   await exec.exec("curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.22.15/2022-10-31/bin/darwin/amd64/kubectl");
   await exec.exec("chmod +x ./kubectl");
-  await fs.mkdir("/tmp");
+  await fs.mkdir("/tmp/argocd-kustomize-validation", { recursive: true });
 }
 
 async function run() {
@@ -66,7 +66,7 @@ async function run() {
       const filename = content.name;
       await fs.writeFile(`/tmp/${path.basename(filename)}`, content.content || '');
     });
-    const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp')).stdout;
+    const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;
     const currKustomizationOutput = (await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
     console.log(baseKustomizationOutput);
     console.log(currKustomizationOutput);
