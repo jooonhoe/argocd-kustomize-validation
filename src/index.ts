@@ -120,11 +120,12 @@ async function run() {
         await octokit.rest.issues.createComment({
           issue_number: actions.issue.number,
           ...actions.repo,
-          body: dedent`
+          body: dedent(`
             Differences of Kustomize built results in ${detectedDir}
             \`\`\`diff
             ${diffOutput}
-            \`\`\``
+            \`\`\`
+          `)
         });
       }
     }
