@@ -15,4 +15,4 @@ jobs:
         with:
           chartmuseum-url: https://chartmuseum.util.riiid.cloud
           chartmuseum-username: riiid
-          chartmuseum-password: ${{ secrets.CHARTMUSUM_PASSWORD }}
+          chartmuseum-password: 1234
