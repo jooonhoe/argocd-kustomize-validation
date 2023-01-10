@@ -15,10 +15,9 @@ jobs:
       - name: "[TEST] ls"
         working-directory: ./argocd-kustomize-validation
         run: |
-          ls -la dist/
+          ls -la
       - name: "[TEST] Run"
         uses: ./
-        working-directory: ./argocd-kustomize-validation
         with:
           chartmuseum-url: https://chartmuseum.util.riiid.cloud
           chartmuseum-username: riiid
