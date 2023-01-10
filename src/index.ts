@@ -53,7 +53,7 @@ async function run() {
     .filter(file => file.status === 'modified' || file.status === 'changed')
     .map(file => path.dirname(file.filename))));
   detectedDirs.forEach(async (detectedDir) => {
-    await fsExtra.emptyDir("/tmp");
+    await fsExtra.emptyDir("/tmp/argocd-kustomize-validation");
     const targetPaths = await fs.readdir(detectedDir);
     targetPaths.forEach(async (targetPath) => {
 
@@ -64,7 +64,7 @@ async function run() {
       })).data as Content;
 
       const filename = content.name;
-      await fs.writeFile(`/tmp/${path.basename(filename)}`, content.content || '');
+      await fs.writeFile(`/tmp/argocd-kustomize-validation/${path.basename(filename)}`, content.content || '');
     });
     const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;
     const currKustomizationOutput = (await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
