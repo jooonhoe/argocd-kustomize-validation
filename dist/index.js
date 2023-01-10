@@ -13644,6 +13644,8 @@ function run() {
         yield buildEnv();
         const compareData = yield octokit.rest.repos.compareCommits(Object.assign(Object.assign({}, actions.repo), { base: actions.payload.pull_request["base"]["sha"], head: actions.sha }));
         const baseRef = actions.payload.pull_request["base"]["ref"];
+        core.debug(actions.payload.pull_request["base"].toString());
+        core.debug((compareData.data.files || []).toString());
         const detectedDirs = Array.from(new Set((compareData.data.files || [])
             .filter(file => file.status === 'modified' || file.status === 'changed')
             .map(file => path_1.default.dirname(file.filename))));

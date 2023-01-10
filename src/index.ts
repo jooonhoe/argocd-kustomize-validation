@@ -49,11 +49,13 @@ async function run() {
     head: actions.sha
   });
   const baseRef = actions.payload.pull_request!["base"]["ref"];
+  core.debug(actions.payload.pull_request!["base"].toString());
+  core.debug((compareData.data.files || []).toString());
   const detectedDirs = Array.from(new Set((compareData.data.files || [])
     .filter(file => file.status === 'modified' || file.status === 'changed')
     .map(file => path.dirname(file.filename))));
   core.debug(detectedDirs.toString());
-  detectedDirs.forEach(async (detectedDir) => {
+  detectedDirs.forEach(async detectedDir => {
     await fsExtra.emptyDir("/tmp/argocd-kustomize-validation");
     const targetPaths = await fs.readdir(detectedDir);
     targetPaths.forEach(async (targetPath) => {
