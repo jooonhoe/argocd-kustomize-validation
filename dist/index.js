@@ -13771,12 +13771,12 @@ function run() {
                     yield exec.exec('diff -U 100000 /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml', undefined, diffCmdOptions);
                 }
                 catch (error) {
-                    yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: (0, dedent_1.default)(`
-            Differences of Kustomize built results in ${detectedDir}
-            \`\`\`diff
-            ${diffOutput}
-            \`\`\`
-          `) }));
+                    yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: (0, dedent_1.default) `
+Differences of Kustomize built results in ${detectedDir}
+\`\`\`diff
+${diffOutput}
+\`\`\`
+          ` }));
                 }
             }
         }
