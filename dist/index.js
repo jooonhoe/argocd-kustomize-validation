@@ -13664,10 +13664,10 @@ function run() {
                 core.debug(content.toString());
                 console.log(content.toString());
             }));
-            const baseKustomizationOutput = (yield exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;
-            const currKustomizationOutput = (yield exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
-            console.log(baseKustomizationOutput);
-            console.log(currKustomizationOutput);
+            // const baseKustomizationOutput = (await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/argocd-kustomize-validation')).stdout;
+            // const currKustomizationOutput = (await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`)).stdout;
+            // console.log(baseKustomizationOutput);
+            // console.log(currKustomizationOutput);
         }));
     });
 }
