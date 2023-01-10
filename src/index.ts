@@ -75,15 +75,15 @@ async function run() {
     }));
     const debugFiles = await fs.readdir("/tmp/resources");
     core.info(`Debug Files(${detectedDir}): ${debugFiles}`);
-    await Promise.all(debugFiles.map(async debugFile => {
-      const content = await fs.readFile(path.join(`/tmp/resources/${debugFile}`));
-      core.info(content.toString());
-    }));
+    // await Promise.all(debugFiles.map(async debugFile => {
+    //   const content = await fs.readFile(path.join(`/tmp/resources/${debugFile}`));
+    //   core.info(content.toString());
+    // }));
     let errorCaptured = false;
-    const baseKustomizationOutput = await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/resources')
+    const baseKustomizationOutput = await exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/resources', undefined, { silent: true })
     await fs.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput.stdout);
     try {
-      const currKustomizationOutput = await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`);
+      const currKustomizationOutput = await exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`, undefined, { silent: true });
       await fs.writeFile("/tmp/kustomization-results/2.yaml", currKustomizationOutput.stdout);
     } catch (error) {
       errorCaptured = true;
@@ -94,25 +94,34 @@ async function run() {
         Kustomize build error in ${detectedDir}
         ---
         \`\`\`
-        ${(error as Error).message}
+        ${(error as Error)}
         \`\`\`
       `
       });
     }
 
     if (!errorCaptured) {
-      const diffOutput = await exec.getExecOutput('diff -u /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml');
-      await octokit.rest.issues.createComment({
-        issue_number: actions.issue.number,
-        ...actions.repo,
-        body: `
+      let diffCmdOptions: exec.ExecOptions = {};
+      let diffOutput = '';
+      diffCmdOptions.listeners = {
+        stderr: (data: Buffer) => {
+          diffOutput += data.toString();
+        }
+      }
+      try {
+        await exec.exec('diff -u /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml');
+      } catch (error) {
+        await octokit.rest.issues.createComment({
+          issue_number: actions.issue.number,
+          ...actions.repo,
+          body: `
         Differences of Kustomize built results in ${detectedDir}
         ---
         \`\`\`diff
-        ${diffOutput.stdout}
+        ${diffOutput}
         \`\`\`
-      `
-      });
+        `});
+      }
     }
   }
 }
