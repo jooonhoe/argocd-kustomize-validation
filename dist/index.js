@@ -13755,7 +13755,6 @@ function run() {
                 errorCaptured = true;
                 yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: (0, dedent_1.default) `
           Kustomize build error in ${detectedDir}
-          ---
           \`\`\`
           ${currKustomizationStderr}
           \`\`\`` }));
@@ -13769,7 +13768,7 @@ function run() {
                     }
                 };
                 try {
-                    yield exec.exec('diff -U -1 /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml', undefined, diffCmdOptions);
+                    yield exec.exec('diff -U 100000 /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml', undefined, diffCmdOptions);
                 }
                 catch (error) {
                     yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: (0, dedent_1.default) `

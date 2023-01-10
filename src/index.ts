@@ -100,7 +100,6 @@ async function run() {
         ...actions.repo,
         body: dedent`
           Kustomize build error in ${detectedDir}
-          ---
           \`\`\`
           ${currKustomizationStderr}
           \`\`\``
@@ -116,7 +115,7 @@ async function run() {
         }
       }
       try {
-        await exec.exec('diff -U -1 /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml', undefined, diffCmdOptions);
+        await exec.exec('diff -U 100000 /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml', undefined, diffCmdOptions);
       } catch (error) {
         await octokit.rest.issues.createComment({
           issue_number: actions.issue.number,
