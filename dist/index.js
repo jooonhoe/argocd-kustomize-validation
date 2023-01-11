@@ -13693,8 +13693,9 @@ function run() {
                 yield fs_1.promises.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput.stdout);
             }
             else {
-                core.setFailed(baseKustomizationOutput.stderr);
-                return;
+                core.error('Error occured in base branch');
+                core.error(baseKustomizationOutput.stderr);
+                continue;
             }
             // let currKustomizationStderr = '';
             // try {
@@ -13716,7 +13717,7 @@ function run() {
             }
             else {
                 yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: `Kustomize build error in ${detectedDir}\n\`\`\`\n${currKustomizationOutput.stderr}\n\`\`\`` }));
-                return;
+                continue;
             }
             // let diffCmdOptions: exec.ExecOptions = {};
             // let diffOutput = '';

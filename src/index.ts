@@ -108,8 +108,9 @@ async function run() {
     if (baseKustomizationOutput.exitCode === 0) {
       await fs.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput.stdout);
     } else {
-      core.setFailed(baseKustomizationOutput.stderr);
-      return;
+      core.error('Error occured in base branch');
+      core.error(baseKustomizationOutput.stderr);
+      continue;
     }
     // let currKustomizationStderr = '';
     // try {
@@ -135,7 +136,7 @@ async function run() {
         ...actions.repo,
         body: `Kustomize build error in ${detectedDir}\n\`\`\`\n${currKustomizationOutput.stderr}\n\`\`\``
       });
-      return;
+      continue;
     }
 
     // let diffCmdOptions: exec.ExecOptions = {};
