@@ -2,7 +2,6 @@ import { promises as fs } from "fs";
 import * as fsExtra from "fs-extra";
 import * as core from "@actions/core";
 import * as exec from "@actions/exec";
-import dedent from "dedent";
 import { context, getOctokit } from "@actions/github";
 import { GitHub } from "@actions/github/lib/utils";
 import path from "path";
@@ -98,11 +97,7 @@ async function run() {
       await octokit.rest.issues.createComment({
         issue_number: actions.issue.number,
         ...actions.repo,
-        body: dedent`
-          Kustomize build error in ${detectedDir}
-          \`\`\`
-          ${currKustomizationStderr}
-          \`\`\``
+        body: `Kustomize build error in ${detectedDir}\n\`\`\`\n${currKustomizationStderr}\n\`\`\``
       });
     }
 
