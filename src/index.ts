@@ -52,7 +52,7 @@ async function run() {
   const compareData = await octokit.rest.repos.compareCommits({
     ...actions.repo,
     base: actions.payload.pull_request!["base"]["sha"],
-    head: actions.sha
+    head: actions.payload.pull_request!["head"]["sha"]
   });
   const baseRef = actions.payload.pull_request!["base"]["ref"];
   const detectedDirs = Array.from(new Set((compareData.data.files || [])

@@ -13646,7 +13646,7 @@ function run() {
     return __awaiter(this, void 0, void 0, function* () {
         const { actions, octokit } = prepareContext(github_1.context);
         yield buildEnv();
-        const compareData = yield octokit.rest.repos.compareCommits(Object.assign(Object.assign({}, actions.repo), { base: actions.payload.pull_request["base"]["sha"], head: actions.sha }));
+        const compareData = yield octokit.rest.repos.compareCommits(Object.assign(Object.assign({}, actions.repo), { base: actions.payload.pull_request["base"]["sha"], head: actions.payload.pull_request["head"]["sha"] }));
         const baseRef = actions.payload.pull_request["base"]["ref"];
         const detectedDirs = Array.from(new Set((compareData.data.files || [])
             .filter(file => file.status === 'modified' || file.status === 'changed')
