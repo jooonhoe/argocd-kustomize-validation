@@ -57,6 +57,7 @@ async function run() {
   const baseRef = actions.payload.pull_request!["base"]["ref"];
   const detectedDirs = Array.from(new Set((compareData.data.files || [])
     .filter(file => file.status === 'modified' || file.status === 'changed')
+    .filter(file => file.filename.startsWith('deploy/'))
     .map(file => path.dirname(file.filename))));
 
   for (let detectedDir of detectedDirs) {
