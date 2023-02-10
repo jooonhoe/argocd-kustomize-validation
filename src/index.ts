@@ -4,7 +4,7 @@ import * as core from "@actions/core";
 import * as exec from "@actions/exec";
 import { context, getOctokit } from "@actions/github";
 import { GitHub } from "@actions/github/lib/utils";
-import path from "path";
+import * as pathlib from "path";
 
 type Context = typeof context;
 
@@ -44,6 +44,22 @@ async function buildEnv() {
   await fs.mkdir("/tmp/kustomization-results", { recursive: true });
 }
 
+async function copyFromBaseRef(actions: Context, octokit: InstanceType<typeof GitHub>, parent: string, path: string) {
+  const baseRef = actions.payload.pull_request!["base"]["ref"];
+  if ((await fs.lstat(path)).isDirectory()) {
+    const newParent = pathlib.join(parent, path);
+    const subPaths = await fs.readdir(newParent);
+    await Promise.all(subPaths.map((subPath) => copyFromBaseRef(actions, octokit, newParent, subPath)));
+  }
+  const content = (await octokit.rest.repos.getContent({
+    ...actions.repo,
+    path: pathlib.join(parent, path),
+    ref: baseRef
+  })).data as Content;
+  const decoded = Buffer.from(content.content || '', "base64").toString("utf8");
+  await fs.writeFile(`/tmp/resources/${pathlib.basename(content.name)}`, decoded);
+}
+
 async function run() {
   const { actions, octokit } = prepareContext(context);
 
@@ -54,26 +70,26 @@ async function run() {
     base: actions.payload.pull_request!["base"]["sha"],
     head: actions.payload.pull_request!["head"]["sha"]
   });
-  const baseRef = actions.payload.pull_request!["base"]["ref"];
   const detectedDirs = Array.from(new Set((compareData.data.files || [])
     .filter(file => file.status === 'modified' || file.status === 'changed')
-    .filter(file => file.filename.startsWith('deploy/'))
-    .map(file => path.dirname(file.filename))));
+    .filter(file => file.filename.startsWith('deploy/') && file.filename.endsWith('kustomization.yaml'))
+    .map(file => pathlib.dirname(file.filename))));
 
   for (let detectedDir of detectedDirs) {
     core.info(`Compare differences between Kustomization build output in "${detectedDir}".`);
     await fsExtra.emptyDir("/tmp/resources");
 
     const targetPaths = await fs.readdir(detectedDir);
-    await Promise.all(targetPaths.map(async (targetPath) => {
-      const content = (await octokit.rest.repos.getContent({
+    try {
+      await Promise.all(targetPaths.map(targetPath => copyFromBaseRef(actions, octokit, detectedDir, targetPath)));
+    } catch (e) {
+      await octokit.rest.issues.createComment({
+        issue_number: actions.issue.number,
         ...actions.repo,
-        path: path.join(detectedDir, targetPath),
-        ref: baseRef
-      })).data as Content;
-      const decoded = Buffer.from(content.content || '', "base64").toString("utf8");
-      await fs.writeFile(`/tmp/resources/${path.basename(content.name)}`, decoded);
-    }));
+        body: `⚠️Kustomize build error in \`${detectedDir}\`:\n\`\`\`\n${e as Error}\n\`\`\``
+      });
+      continue;
+    }
 
     const baseKustomizationOutput = await exec.getExecOutput(
       './kubectl kustomize --enable-helm /tmp/resources',
