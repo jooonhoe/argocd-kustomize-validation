@@ -76,6 +76,8 @@ async function run() {
     .filter(file => file.filename.startsWith('deploy/'))
     .map(file => pathlib.dirname(file.filename))));
 
+  await exec.exec('git fetch');
+
   for (let detectedDir of detectedDirs) {
     await fsExtra.emptyDir("/tmp/resources");
     const targetPaths = await fs.readdir(detectedDir);
@@ -111,7 +113,6 @@ async function run() {
       });
       continue;
     }
-
     await exec.exec(`git checkout ${actions.payload.pull_request!["head"]["ref"]}`);
 
     const currKustomizationOutput = await exec.getExecOutput(

@@ -13662,6 +13662,7 @@ function run() {
             .filter(file => file.status === 'modified' || file.status === 'changed')
             .filter(file => file.filename.startsWith('deploy/'))
             .map(file => pathlib.dirname(file.filename))));
+        yield exec.exec('git fetch');
         for (let detectedDir of detectedDirs) {
             yield fsExtra.emptyDir("/tmp/resources");
             const targetPaths = yield fs_1.promises.readdir(detectedDir);
