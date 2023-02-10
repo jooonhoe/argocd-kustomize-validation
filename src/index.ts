@@ -72,7 +72,7 @@ async function run() {
   });
   const detectedDirs = Array.from(new Set((compareData.data.files || [])
     .filter(file => file.status === 'modified' || file.status === 'changed')
-    .filter(file => file.filename.startsWith('deploy/') && file.filename.endsWith('kustomization.yaml'))
+    .filter(file => file.filename.startsWith('deploy/'))
     .map(file => pathlib.dirname(file.filename))));
 
   for (let detectedDir of detectedDirs) {
@@ -80,6 +80,11 @@ async function run() {
     await fsExtra.emptyDir("/tmp/resources");
 
     const targetPaths = await fs.readdir(detectedDir);
+
+    if (!targetPaths.includes('kustomization.yaml')) {
+      continue;
+    }
+
     try {
       await Promise.all(targetPaths.map(targetPath => copyFromBaseRef(actions, octokit, detectedDir, targetPath)));
     } catch (e) {
