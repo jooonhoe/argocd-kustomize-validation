@@ -13659,12 +13659,15 @@ function run() {
         const compareData = yield octokit.rest.repos.compareCommits(Object.assign(Object.assign({}, actions.repo), { base: actions.payload.pull_request["base"]["sha"], head: actions.payload.pull_request["head"]["sha"] }));
         const detectedDirs = Array.from(new Set((compareData.data.files || [])
             .filter(file => file.status === 'modified' || file.status === 'changed')
-            .filter(file => file.filename.startsWith('deploy/') && file.filename.endsWith('kustomization.yaml'))
+            .filter(file => file.filename.startsWith('deploy/'))
             .map(file => pathlib.dirname(file.filename))));
         for (let detectedDir of detectedDirs) {
             core.info(`Compare differences between Kustomization build output in "${detectedDir}".`);
             yield fsExtra.emptyDir("/tmp/resources");
             const targetPaths = yield fs_1.promises.readdir(detectedDir);
+            if (!targetPaths.includes('kustomization.yaml')) {
+                continue;
+            }
             try {
                 yield Promise.all(targetPaths.map(targetPath => copyFromBaseRef(actions, octokit, detectedDir, targetPath)));
             }
