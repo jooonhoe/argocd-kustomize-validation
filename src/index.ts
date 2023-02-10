@@ -13,20 +13,6 @@ type CustomContext = {
   octokit: InstanceType<typeof GitHub>
 };
 
-type Content = {
-  type: string;
-  size: number;
-  name: string;
-  path: string;
-  content?: string | undefined;
-  sha: string;
-  url: string;
-  git_url: string | null;
-  html_url: string | null;
-  download_url: string | null;
-  _links: object
-};
-
 function prepareContext(ctx: Context): CustomContext {
   return {
     actions: ctx,
@@ -42,23 +28,6 @@ async function buildEnv() {
   await exec.exec("./get_helm.sh");
   await fs.mkdir("/tmp/resources", { recursive: true });
   await fs.mkdir("/tmp/kustomization-results", { recursive: true });
-}
-
-async function copyFromBaseRef(actions: Context, octokit: InstanceType<typeof GitHub>, parent: string, path: string) {
-  const baseRef = actions.payload.pull_request!["base"]["ref"];
-  const fullPath = pathlib.join(parent, path);
-  if ((await fs.lstat(fullPath)).isDirectory()) {
-    const newParent = fullPath;
-    const subPaths = await fs.readdir(newParent);
-    await Promise.all(subPaths.map((subPath) => copyFromBaseRef(actions, octokit, newParent, subPath)));
-  }
-  const content = (await octokit.rest.repos.getContent({
-    ...actions.repo,
-    path: fullPath,
-    ref: baseRef
-  })).data as Content;
-  const decoded = Buffer.from(content.content || '', "base64").toString("utf8");
-  await fs.writeFile(`/tmp/resources/${pathlib.basename(content.name)}`, decoded);
 }
 
 async function run() {
@@ -87,16 +56,6 @@ async function run() {
 
     core.info(`Compare differences between Kustomization build output in "${detectedDir}".`);
 
-    // try {
-    //   await Promise.all(targetPaths.map(targetPath => copyFromBaseRef(actions, octokit, detectedDir, targetPath)));
-    // } catch (e) {
-    //   await octokit.rest.issues.createComment({
-    //     issue_number: actions.issue.number,
-    //     ...actions.repo,
-    //     body: `⚠️Kustomize build error in \`${detectedDir}\`:\n\`\`\`\n${e as Error}\n\`\`\``
-    //   });
-    //   continue;
-    // }
     const baseRef = actions.payload.pull_request!["base"]["ref"];
     await exec.exec(`git checkout ${baseRef}`);
 
@@ -124,7 +83,7 @@ async function run() {
       await octokit.rest.issues.createComment({
         issue_number: actions.issue.number,
         ...actions.repo,
-        body: `⚠️Kustomize build error in \`${detectedDir}\`:\n\`\`\`\n${currKustomizationOutput.stderr}\n\`\`\``
+        body: `⚠️Kustomize build error in \`${detectedDir}\` on head branch:\n\`\`\`\n${currKustomizationOutput.stderr}\n\`\`\``
       });
       continue;
     }
