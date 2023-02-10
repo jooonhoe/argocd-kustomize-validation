@@ -13615,16 +13615,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const fs_1 = __nccwpck_require__(7147);
 const fsExtra = __importStar(__nccwpck_require__(5090));
 const core = __importStar(__nccwpck_require__(6428));
 const exec = __importStar(__nccwpck_require__(5305));
 const github_1 = __nccwpck_require__(102);
-const path_1 = __importDefault(__nccwpck_require__(1017));
+const pathlib = __importStar(__nccwpck_require__(1017));
 function prepareContext(ctx) {
     return {
         actions: ctx,
@@ -13647,35 +13644,35 @@ function run() {
         const { actions, octokit } = prepareContext(github_1.context);
         yield buildEnv();
         const compareData = yield octokit.rest.repos.compareCommits(Object.assign(Object.assign({}, actions.repo), { base: actions.payload.pull_request["base"]["sha"], head: actions.payload.pull_request["head"]["sha"] }));
-        const baseRef = actions.payload.pull_request["base"]["ref"];
         const detectedDirs = Array.from(new Set((compareData.data.files || [])
             .filter(file => file.status === 'modified' || file.status === 'changed')
             .filter(file => file.filename.startsWith('deploy/'))
-            .map(file => path_1.default.dirname(file.filename))));
+            .map(file => pathlib.dirname(file.filename))));
+        yield exec.exec('git fetch');
         for (let detectedDir of detectedDirs) {
-            core.info(`Compare differences between Kustomization build output in "${detectedDir}".`);
             yield fsExtra.emptyDir("/tmp/resources");
             const targetPaths = yield fs_1.promises.readdir(detectedDir);
-            yield Promise.all(targetPaths.map((targetPath) => __awaiter(this, void 0, void 0, function* () {
-                const content = (yield octokit.rest.repos.getContent(Object.assign(Object.assign({}, actions.repo), { path: path_1.default.join(detectedDir, targetPath), ref: baseRef }))).data;
-                const decoded = Buffer.from(content.content || '', "base64").toString("utf8");
-                yield fs_1.promises.writeFile(`/tmp/resources/${path_1.default.basename(content.name)}`, decoded);
-            })));
-            const baseKustomizationOutput = yield exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/resources', undefined, { silent: true, ignoreReturnCode: true });
+            if (!targetPaths.includes('kustomization.yaml')) {
+                continue;
+            }
+            core.info(`Compare differences between Kustomization build output in "${detectedDir}".`);
+            const baseRef = actions.payload.pull_request["base"]["ref"];
+            yield exec.exec(`git checkout ${baseRef}`);
+            const baseKustomizationOutput = yield exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`, undefined, { silent: true, ignoreReturnCode: true });
             if (baseKustomizationOutput.exitCode === 0) {
                 yield fs_1.promises.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput.stdout);
             }
             else {
-                core.error('Error occured in base branch');
-                core.error(baseKustomizationOutput.stderr);
+                yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: `⚠️Kustomize build error in \`${detectedDir}\` on base branch:\n\`\`\`\n${baseKustomizationOutput.stderr}\n\`\`\`` }));
                 continue;
             }
+            yield exec.exec(`git checkout ${actions.payload.pull_request["head"]["ref"]}`);
             const currKustomizationOutput = yield exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`, undefined, { silent: true, ignoreReturnCode: true });
             if (currKustomizationOutput.exitCode === 0) {
                 yield fs_1.promises.writeFile("/tmp/kustomization-results/2.yaml", currKustomizationOutput.stdout);
             }
             else {
-                yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: `⚠️Kustomize build error in \`${detectedDir}\`:\n\`\`\`\n${currKustomizationOutput.stderr}\n\`\`\`` }));
+                yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: `⚠️Kustomize build error in \`${detectedDir}\` on head branch:\n\`\`\`\n${currKustomizationOutput.stderr}\n\`\`\`` }));
                 continue;
             }
             const diffOutput = yield exec.getExecOutput('diff -U 100000 /tmp/kustomization-results/1.yaml /tmp/kustomization-results/2.yaml', undefined, { silent: true, ignoreReturnCode: true });
