@@ -46,14 +46,15 @@ async function buildEnv() {
 
 async function copyFromBaseRef(actions: Context, octokit: InstanceType<typeof GitHub>, parent: string, path: string) {
   const baseRef = actions.payload.pull_request!["base"]["ref"];
-  if ((await fs.lstat(path)).isDirectory()) {
-    const newParent = pathlib.join(parent, path);
+  const fullPath = pathlib.join(parent, path);
+  if ((await fs.lstat(fullPath)).isDirectory()) {
+    const newParent = fullPath;
     const subPaths = await fs.readdir(newParent);
     await Promise.all(subPaths.map((subPath) => copyFromBaseRef(actions, octokit, newParent, subPath)));
   }
   const content = (await octokit.rest.repos.getContent({
     ...actions.repo,
-    path: pathlib.join(parent, path),
+    path: fullPath,
     ref: baseRef
   })).data as Content;
   const decoded = Buffer.from(content.content || '', "base64").toString("utf8");
@@ -76,7 +77,6 @@ async function run() {
     .map(file => pathlib.dirname(file.filename))));
 
   for (let detectedDir of detectedDirs) {
-    core.info(`Compare differences between Kustomization build output in "${detectedDir}".`);
     await fsExtra.emptyDir("/tmp/resources");
 
     const targetPaths = await fs.readdir(detectedDir);
@@ -84,6 +84,8 @@ async function run() {
     if (!targetPaths.includes('kustomization.yaml')) {
       continue;
     }
+
+    core.info(`Compare differences between Kustomization build output in "${detectedDir}".`);
 
     try {
       await Promise.all(targetPaths.map(targetPath => copyFromBaseRef(actions, octokit, detectedDir, targetPath)));

@@ -13642,12 +13642,13 @@ function buildEnv() {
 function copyFromBaseRef(actions, octokit, parent, path) {
     return __awaiter(this, void 0, void 0, function* () {
         const baseRef = actions.payload.pull_request["base"]["ref"];
-        if ((yield fs_1.promises.lstat(path)).isDirectory()) {
-            const newParent = pathlib.join(parent, path);
+        const fullPath = pathlib.join(parent, path);
+        if ((yield fs_1.promises.lstat(fullPath)).isDirectory()) {
+            const newParent = fullPath;
             const subPaths = yield fs_1.promises.readdir(newParent);
             yield Promise.all(subPaths.map((subPath) => copyFromBaseRef(actions, octokit, newParent, subPath)));
         }
-        const content = (yield octokit.rest.repos.getContent(Object.assign(Object.assign({}, actions.repo), { path: pathlib.join(parent, path), ref: baseRef }))).data;
+        const content = (yield octokit.rest.repos.getContent(Object.assign(Object.assign({}, actions.repo), { path: fullPath, ref: baseRef }))).data;
         const decoded = Buffer.from(content.content || '', "base64").toString("utf8");
         yield fs_1.promises.writeFile(`/tmp/resources/${pathlib.basename(content.name)}`, decoded);
     });
@@ -13662,12 +13663,12 @@ function run() {
             .filter(file => file.filename.startsWith('deploy/'))
             .map(file => pathlib.dirname(file.filename))));
         for (let detectedDir of detectedDirs) {
-            core.info(`Compare differences between Kustomization build output in "${detectedDir}".`);
             yield fsExtra.emptyDir("/tmp/resources");
             const targetPaths = yield fs_1.promises.readdir(detectedDir);
             if (!targetPaths.includes('kustomization.yaml')) {
                 continue;
             }
+            core.info(`Compare differences between Kustomization build output in "${detectedDir}".`);
             try {
                 yield Promise.all(targetPaths.map(targetPath => copyFromBaseRef(actions, octokit, detectedDir, targetPath)));
             }
