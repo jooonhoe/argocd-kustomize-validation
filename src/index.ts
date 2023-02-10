@@ -78,36 +78,41 @@ async function run() {
 
   for (let detectedDir of detectedDirs) {
     await fsExtra.emptyDir("/tmp/resources");
-
     const targetPaths = await fs.readdir(detectedDir);
-
     if (!targetPaths.includes('kustomization.yaml')) {
       continue;
     }
 
     core.info(`Compare differences between Kustomization build output in "${detectedDir}".`);
 
-    try {
-      await Promise.all(targetPaths.map(targetPath => copyFromBaseRef(actions, octokit, detectedDir, targetPath)));
-    } catch (e) {
-      await octokit.rest.issues.createComment({
-        issue_number: actions.issue.number,
-        ...actions.repo,
-        body: `⚠️Kustomize build error in \`${detectedDir}\`:\n\`\`\`\n${e as Error}\n\`\`\``
-      });
-      continue;
-    }
+    // try {
+    //   await Promise.all(targetPaths.map(targetPath => copyFromBaseRef(actions, octokit, detectedDir, targetPath)));
+    // } catch (e) {
+    //   await octokit.rest.issues.createComment({
+    //     issue_number: actions.issue.number,
+    //     ...actions.repo,
+    //     body: `⚠️Kustomize build error in \`${detectedDir}\`:\n\`\`\`\n${e as Error}\n\`\`\``
+    //   });
+    //   continue;
+    // }
+    const baseRef = actions.payload.pull_request!["base"]["ref"];
+    await exec.exec(`git checkout ${baseRef}`);
 
     const baseKustomizationOutput = await exec.getExecOutput(
-      './kubectl kustomize --enable-helm /tmp/resources',
+      `./kubectl kustomize --enable-helm ${detectedDir}`,
       undefined, { silent: true, ignoreReturnCode: true });
     if (baseKustomizationOutput.exitCode === 0) {
       await fs.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput.stdout);
     } else {
-      core.error('Error occured in base branch');
-      core.error(baseKustomizationOutput.stderr);
+      await octokit.rest.issues.createComment({
+        issue_number: actions.issue.number,
+        ...actions.repo,
+        body: `⚠️Kustomize build error in \`${detectedDir}\` on base branch:\n\`\`\`\n${baseKustomizationOutput.stderr}\n\`\`\``
+      });
       continue;
     }
+
+    await exec.exec(`git checkout ${actions.payload.pull_request!["head"]["ref"]}`);
 
     const currKustomizationOutput = await exec.getExecOutput(
       `./kubectl kustomize --enable-helm ${detectedDir}`,

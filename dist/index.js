@@ -13669,22 +13669,27 @@ function run() {
                 continue;
             }
             core.info(`Compare differences between Kustomization build output in "${detectedDir}".`);
-            try {
-                yield Promise.all(targetPaths.map(targetPath => copyFromBaseRef(actions, octokit, detectedDir, targetPath)));
-            }
-            catch (e) {
-                yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: `⚠️Kustomize build error in \`${detectedDir}\`:\n\`\`\`\n${e}\n\`\`\`` }));
-                continue;
-            }
-            const baseKustomizationOutput = yield exec.getExecOutput('./kubectl kustomize --enable-helm /tmp/resources', undefined, { silent: true, ignoreReturnCode: true });
+            // try {
+            //   await Promise.all(targetPaths.map(targetPath => copyFromBaseRef(actions, octokit, detectedDir, targetPath)));
+            // } catch (e) {
+            //   await octokit.rest.issues.createComment({
+            //     issue_number: actions.issue.number,
+            //     ...actions.repo,
+            //     body: `⚠️Kustomize build error in \`${detectedDir}\`:\n\`\`\`\n${e as Error}\n\`\`\``
+            //   });
+            //   continue;
+            // }
+            const baseRef = actions.payload.pull_request["base"]["ref"];
+            yield exec.exec(`git checkout ${baseRef}`);
+            const baseKustomizationOutput = yield exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`, undefined, { silent: true, ignoreReturnCode: true });
             if (baseKustomizationOutput.exitCode === 0) {
                 yield fs_1.promises.writeFile("/tmp/kustomization-results/1.yaml", baseKustomizationOutput.stdout);
             }
             else {
-                core.error('Error occured in base branch');
-                core.error(baseKustomizationOutput.stderr);
+                yield octokit.rest.issues.createComment(Object.assign(Object.assign({ issue_number: actions.issue.number }, actions.repo), { body: `⚠️Kustomize build error in \`${detectedDir}\` on base branch:\n\`\`\`\n${baseKustomizationOutput.stderr}\n\`\`\`` }));
                 continue;
             }
+            yield exec.exec(`git checkout ${actions.payload.pull_request["head"]["ref"]}`);
             const currKustomizationOutput = yield exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`, undefined, { silent: true, ignoreReturnCode: true });
             if (currKustomizationOutput.exitCode === 0) {
                 yield fs_1.promises.writeFile("/tmp/kustomization-results/2.yaml", currKustomizationOutput.stdout);
