@@ -73,6 +73,7 @@ async function run() {
       continue;
     }
     await exec.exec(`git checkout ${actions.payload.pull_request!["head"]["ref"]}`);
+    await fs.rm(`${detectedDir}/charts`, { recursive: true, force: true });
 
     const currKustomizationOutput = await exec.getExecOutput(
       `./kubectl kustomize --enable-helm ${detectedDir}`,

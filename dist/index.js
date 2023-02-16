@@ -13667,6 +13667,7 @@ function run() {
                 continue;
             }
             yield exec.exec(`git checkout ${actions.payload.pull_request["head"]["ref"]}`);
+            yield fs_1.promises.rm(`${detectedDir}/charts`, { recursive: true, force: true });
             const currKustomizationOutput = yield exec.getExecOutput(`./kubectl kustomize --enable-helm ${detectedDir}`, undefined, { silent: true, ignoreReturnCode: true });
             if (currKustomizationOutput.exitCode === 0) {
                 yield fs_1.promises.writeFile("/tmp/kustomization-results/2.yaml", currKustomizationOutput.stdout);
